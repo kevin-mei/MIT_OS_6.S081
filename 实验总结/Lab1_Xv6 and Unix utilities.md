@@ -1,334 +1,98 @@
-这个实验目的：熟悉xv6系统和它的系统调用
+# lab1 实验目的：熟悉xv6系统和它的系统调用
 
-按计划，先阅读
+## 一. 实验前准备
+按计划，先阅读下面三项
 
 1. 介绍： <https://pdos.csail.mit.edu/6.828/2019/lec/l-overview.txt>
-2. 例子： <https://pdos.csail.mit.edu/6.828/2019/lec/l-overview/>
-3. read chapter 1 of the xv6 book
-
-介绍 和 例子是匹配的，例子是代码，介绍里会详细讲解代码用途和细节：
-
-1. UNIX系统调用简介
-  6.S081专注于系统调用接口的设计和实现。
+   > 大体意思是：6.S081专注于系统调用接口的设计和实现。
   我们将研究UNIX（Linux，Mac，POSIX和xv6）。
   让我们看看程序如何使用系统调用接口。
-  您将在第一个实验中使用这些系统调用。
-2. 实例
-  示例：open.c，创建一个文件
-  详细介绍了read/write的函数用法
-  read()和write()是系统调用
-  read()/write()第一个参数是“文件描述符”（fd）
-    传递给内核以告诉它要读取/写入哪个“打开文件”
-    必须先前已打开
-    FD连接到文件/设备/套接字/＆c
-    一个进程可以打开很多文件，有很多FD
-    UNIX约定：fd 0是“标准输入”，1是“标准输出”
-  read()第二个参数是指向一些要读取的内存的指针
-  第三个参数是要读取的字节数
-    read()可能读的少一些，但不能读更多
-  返回值：实际读取的字节数
-   interpretation is application-specific, e.g. C program, executable, &c
-  where do file descriptors come from?  这里的&c是什么意思, 应该是等等的意思
+2. 例子： <https://pdos.csail.mit.edu/6.828/2019/lec/l-overview/>;
+    > 实例 给了多个.c文件，上面的链接中有对应的英文解释，自己看的时候可以对应翻译到.c文件
+  另外，推荐<https://mit-public-courses-cn-translatio.gitbook.io/mit6-s081>，大佬应该是看了视频课程，并做了翻译，很强；
+3. read chapter 1 of the xv6 book
+   > 推荐使用知云文献翻译，中英文对照阅读
 
-```cpp
-  write(1, buf, n); //UNIX约定：fd 0是“标准输入”，1是“标准输出” 给标准输出中写入hello
+4. 接下来就是进行实验：作业链接：<https://pdos.csail.mit.edu/6.828/2019/labs/util.html>
 
-  FD可以做一个指向“管道”的引用,就像对文件一样引用
+
+## 二. 知识点
+
+1. UNIX约定：fd 0是“标准输入”，1是“标准输出”
+2. FD可以做一个指向“管道”的引用,就像对文件一样引用
   系统调用pipe()创建一对FD
     从第一个FD读取
     从第二个FD写入
-```
 
-* 总结下例子
-  * 我们研究了UNIX的I/O，文件系统和进程抽象。
-  * 接口很简单-只是整数和（拷贝）缓冲区。
-  * 这些抽象结合得很好，如：用于I/O重定向。
 
-您将在下个星期的第一个实验中使用UNIX系统调用。
 
-【杂项】
-amusement [ə'mjuzmənt] 娱乐
-assignment  [ə'saɪnmənt] 任务，作业
-vscode 打开
-
-vi 跳转到指定行号：
-
-```cpp
-// 第一种方式
-$ vi makefile
-$:n //n 为行号
-
-// 第二种方式
-$ vi +169 makefile // 打开makefile 直接跳转到169行
-```
-
-xv6 book chapter 1：
-
-## 操作系统接口
-
-操作系统的工作是在多个程序之间共享计算机，并提供一组比单独的硬件所支持的更有用的服务。操作系统管理和抽象底层硬件，因此，例如，一个WORD程序不需要关心它自己正在使用哪种类型的磁盘硬件。它还在多个程序之间共享硬件，以便它们同时运行(或看起来运行)。最后，操作系统为程序的交互提供了可控的方式，这样它们就可以共享数据或一起工作。
-
-操作系统通过接口为用户程序提供服务。设计一个好的界面是很困难的。一方面，我们希望接口简单而有限，因为这样更容易实现正确。另一方面，我们可能会忍不住为应用程序提供许多复杂的特性。解决这种紧张关系的技巧是设计依赖于一些机制的接口，这些机制可以结合起来提供更多的通用性。
-
-本书用一个简单的操作系统作为一个具体的例子来说明操作系统的概念。xv6这个操作系统提供了Ken Thompson和Dennis Ritchie的Unix操作系统[10]所介绍的基本接口，并模仿[mimicking]了Unix的内部设计。Unix提供了一个有限的接口，它的机制组合得很好，提供了惊人的通用性。这个界面非常成功，以至于现代操作系统——bsd、Linux、Mac OS X、Solaris，甚至在较小程度上，Microsoft windows——都有类似unix的界面。理解xv6是理解这些系统和其他许多系统的良好开端。
-如图1.1所示，xv6采用了传统的内核形式，这是一个为运行的程序提供服务的特殊程序。每个正在运行的程序，称为一个进程，它的内存中包含指令、数据和一个堆栈。这些指令实现了程序的计算。数据是计算作用的变量。堆栈组织程序的过程调用。
-
-当进程需要调用内核服务时，它会在插入一个程序调用操作系统接口。这样的程序称为系统调用(system call)。系统调用进入内核;内核执行服务并返回。因此，进程会在用户空间(user space)和内核空间(kernel space)之间交替执行。
-
-内核使用CPU的硬件保护机制来确保在用户空间中执行的每个进程只能访问自己的内存。内核执行时具有实现这些保护所需的硬件特权;用户程序执行时没有这些权限;当一个用户程序调用系统调用，硬件提高权限级别并开始执行内核中预先安排的函数；
-
-内核提供的系统调用集合是用户程序看到的接口。xv6内核提供Unix内核传统上提供的服务和系统调用的一个子集。图1.2列出了xv6的所有系统调用。
-
-本章的其余部分概述了xv6的服务——进程、内存、文件描述符、管道和文件系统——并通过代码片段和讨论shell(传统类unix系统的主要用户界面)如何使用它们来说明这些服务。shell对系统调用的使用说明了它们是如何精心设计的。
-
-shell是一个普通的程序，它从用户那里读取命令并执行它们。shell是用户程序而不是内核的一部分，这一事实说明了系统调用接口的强大功能:shell没有什么特别之处。这也意味着shell很容易更换;因此，现代的Unix系统有多种shell可供选择，每种shell都有自己的用户界面和脚本特性。xv6 shell是Unix Bourne shell本质的一个简单实现。它的实现可以在(user/sh.c:1)找到。
-
-## 1.1 进程和内存
-
-xv6进程由用户空间内存(指令、数据和堆栈)和每个进程状态（内核私有的）组成。Xv6可以计时共享进程:它透明地在等待执行的一组进程之间切换可用的cpu。当进程没有执行时，xv6保存它的CPU寄存器，在下次运行该进程时恢复它们。内核将一个进程标识符(pid)与每个进程关联起来。
-
-一个进程可以使用fork系统调用创建一个新的进程。fork()创建一个名为子进程的新进程，它的内存内容与被称为父进程的调用进程完全相同。fork()会在父进程和子进程中同时返回。在父进程中，fork返回子进程的pid;在子节点中，它返回0。例如，考虑下面用C语言[5]编写的程序片段:
-
-```cpp
-// exit()的函数声明在stdlib.h头文件中。
-// _exit()的函数声明在unistd.h头文件当中。
-int pid = fork();
-if(pid > 0){
-printf("parent: child=%d\en", pid);
-pid = wait(0);
-printf("child %d is done\en", pid);
-} else if(pid == 0){
-  printf("child: exiting\en");
-exit(0);
-} else {
-printf("fork error\en");
-}
-```
-
-exit() 系统调用导致调用进程停止执行，释放资源(内存, 已打开文件等)。Exit接受一个整数状态参数，通常0表示成功，1表示失败。wait系统调用返回当前进程已退出的子进程的pid，并将子进程的退出状态复制到传递给wait的地址;如果调用者的子进程都没有退出，wait会等待一个子进程退出。如果父进程不关心子进程的退出状态，它可以传递一个0地址来等待；
-
-```cpp
-parent: child=1327
-child: exiting
-```
-
-上面两句输出可能会以任意顺序出现，这取决于父子进程谁先执行printf。在子进程退出，父进程的wait()返回后后，导致父进程打印：
-`child 1327 is done`
-
-虽然子进程最初与父进程具有相同的内存内容，但父进程和子进程是使用不同的内存和不同的寄存器执行的：更改其中一个变量不会影响另一个变量。例如，当wait()的返回值存储在父进程的pid中时，它不会更改子进程中的变量pid。子进程内的pid值仍然是零。
-
-system调用:exec()使用从文件系统中存储的文件加载的新内存映像替换调用进程的内存。文件必须有一个特定的格式，它指定文件的哪个部分包含指令，哪个部分是数据，在哪个指令处开始，等等。xv6使用elf格式，第3章对此进行了更详细的讨论。当exec()执行成功时，它不会返回到调用程序；相反，从文件加载的指令开始到在ELF header中声明的入口点。exec()两个参数：包含可执行参数的文件名和字符串参数数组
-
-```cpp
-char*argv[3];
-argv[0] = "echo";
-argv[1] = "hello";
-argv[2] = 0;
-exec("/bin/echo", argv);
-printf("exec error\en");
-```
-
-这个片段将调用程序替换为"/bin/echo", 并传入一个参数数组“echo hello”的实例。大多数程序都忽略了第一个参数，这通常是程序的名称。
-
-xv6 的 shell使用上述调用代表用户运行程序。shell的主要结构很简单；请参阅main（user/sh.c:145）。主循环用getcmd从用户那里读取一行输入。然后调用fork，它创建shell进程的一个副本。父进程调用wait，而子进程运行命令。例如，如果用户在shell中键入了“echo hello”，runcmd将以“echo hello”作为参数.runcmd（user/sh.c:58）运行实际命令。对于“echo hello”，它将调用exec（user/sh.c:78）。如果exec成功，那么子级将执行来自echo而不是runcmd的指令。在某个时刻，echo调用exit，这将导致父进程从wait()返回(user/sh.c:145);
-
-您可能想知道为什么fork和exec没有组合在一个调用中；稍后我们将看到，用于创建进程和加载程序的分开调用在shell中有一些巧妙的用法，用于I/O重定向。为了避免浪费，创建一个复制进程然后立即替换它，操作内核内存优化通过使用虚拟内存技术（比如写时拷贝）也是这种实现的例子；
-
-Xv6隐式申请了大部分用户态内存:fork申请了子进程的拷贝父进程内存副本所需的内存，而exec（）申请了足够的内存来保存可执行文件。一个进程在运行时可能需要更多内存的（例如调用malloc），可以调用sbrk（n）按n个字节进行申请内存；sbrk返回新内存的位置；
-
-Xv6不提供用户或保护一个用户不受另一个用户影响的概念；在Unix术语中，所有Xv6进程都以root用户身份运行。
-
-## 1.2 i/o和文件描述符 
-
-文件描述符是一个小整数，表示进程可以读取或写入的内核管理对象。进程可以通过打开文件、目录或设备、创建管道或复制现有描述符来获取文件描述符。为简单起见，我们通常将文件描述符所指的对象称为“文件”；文件描述符接口抽象掉文件、管道和设备之间的差异，使它们看起来都像字节流。
-
-实际上，xv6内核使用文件描述符作为每个进程表的索引，因此每个进程都有一个从零开始的文件描述符的私有空间。按照惯例，进程从文件描述符0读取（标准输入），将输出写入文件描述符1（标准输出），并将错误消息写入文件描述符2（标准错误）。正如我们将看到的，shell利用这个约定来实现I/O重定向和管道。shell确保它总是有三个打开的文件描述符（user/sh.c:151），这是控制台的默认文件描述符。
-
-system调用：read和write， 从fd中读取bytes和给fd写入bytes。`read(fd, buf, n)`从文件描述符fd读取至多n个bytes，将它们复制到buf，并返回读取的字节数。引用文件的每个文件描述符都有一个与它相关的offset。读来自当前文件偏移量的数据，然后按读取的字节数前进该偏移量：随后的进程将返回第一次读取返回的字节之后的字节。当没有更多的字节可读取时，read返回0表示文件结束；
-
-`write(fd, buf, n)`将buf中的n个bytes写入文件描述符，并返回写入的字节数。只有发生错误时才会写入小于n字节的数据。与读一样，writes在当前文件偏移量处offset写入数据，然后将该偏移量向前推进写入的字节数：每个writes从上一个偏移量停止的地方开始;
-
-下面的程序片段（是cat的本质）将数据从标准输入复制到标准输出。如果发生错误，它会将错误消息写入standard error；
-
-```cpp
-  char buf[512];
-  int n;
-  for (;;)
-  {
-    n = read(0, buf, sizeof buf);
-    if (n == 0)
-      break;
-    if (n < 0)
-    {
-      fprintf(2, "read error\en"); //错误消息写入standard error,fd:2
-      exit();
-    }
-    if (write(1, buf, n) != n)
-    {
-      fprintf(2, "write error\en");
-      exit();
-    }
-  }
-```
-
-```cpp
-// 在当前文件夹下寻找包含3G的行号
-$ grep 3G . -rn
-```
-
-在代码片段中需要注意的重要一点是，cat不知道它是从文件、控制台还是管道读取数据。同样，cat也不知道它是打印到控制台、文件还是别的什么。文件描述符的使用以及文件描述符0作为输入，文件描述符1作为输出的约定支撑起一个简单的cat实现；
-
-系统调用：closes(fd)释放一个文件描述符，使它可以被未来的open、pipe、ordup等系统调用重用(见下文)。新分配的文件描述符总是当前进程中编号最小的未使用描述符；
-
-文件描述符和fork相互配合使I/O重定向易于实现。fork复制父进程的文件描述符表和它的内存，这样子进程开始时打开的文件与父进程完全相同。系统调用exec()函数替换调用进程的内存，但保留其文件表。这种行为允许shell通过fork()、重新打开选择的文件描述符，然后执行新程序来实现I/O重定向。下面是为`cat < input.txt`命令运行的的简化版本实现；
-
-```cpp
-  char *argv[2];
-  argv[0] = "cat";
-  argv[1] = 0;
-  if (fork() == 0)
-  {
-    close(0); //子进程中关闭标准输入，0
-    open("input.txt", O_RDONLY);// open保证为新打开的输入使用该文件描述符，0将是最小的可用文件描述符
-    exec("cat", argv);//cat执行时的文件描述符0(标准输入)，指向input.txt；完成输入重定向
-  }
-```
-
-xv6 shell中用于I/O重定向的代码就是这样工作的(user/sh.c:82)。回想一下，在代码的这一点上，shell已经fork了子shell, runcmd将调用exec()来加载新程序。现在应该清楚为什么fork()和exec()分开调用是一个好主意了。因为如果它们是分开的，shell可以fork一个子进程，子进程中使用open()、close()、dup(int fd)来更改标准的输入和输出文件描述符，然后执行。不需要对正在执行的程序(如我们的示例)进行更改。如果fork和exec被组合到单个系统调用中，shell将需要一些其他(可能更复杂的)方案来重定向标准输入和输出，或者程序本身必须理解如何重定向I/O；
-
-虽然fork复制了文件描述符表，但每个底层文件偏移量都是在父进程和子进程之间共享的。考虑一下这个例子：
-
-```cpp
-  if (fork() == 0)
-  {
-    write(1, "hello ", 6);
-    exit(0);
-  }
-  else
-  {
-    wait(0);
-    write(1, "world\en", 6);
-  }
-```
-
-上面程序最终输出`hello world`；在这个片段的最后，附加到文件描述符1的文件将包含数据hello world。父进程的write(多亏了wait，它只有在子进程完成后才会运行)选择子进程的write离开时关闭的offset。这个行为有助于从一系列shell命令中产生连续的输出，比如
-
-```cpp
-(echo hello;echo world) > output.txt
-// 最终输出：
-hello
-world
-```
-
-system调用：dup()复制了一个现有的文件描述符，返回一个引用自相同底层I/O对象的新描述符。这两个文件描述符共享一个偏移量offset，就像被fork()复制的文件描述符一样。这是将hello world写入文件的另一种方法;
-
-```cpp
-  fd = dup(1); // 复制标准输出文件描述符
-  write(1, "hello ", 6);
-  write(fd, "world\n", 6);
-```
-
-如果两个文件描述符通过一系列fork()和dup()操作从相同的原始文件描述符派生而来，则它们共享一个偏移量。否则，文件描述符不会共享偏移量，即使它们使用open()打开同一个文件。Dup() 支持shell实现这样的命令:`ls existingfile non- existingfile > tmp1 2>&1`.`2>&1`告诉shell,给命令一个文件描述符2，它是描述符1的副本。现有文件的名称和不存在文件的错误消息都将显示在tmp1文件中。xv6 shell不支持错误文件描述符的I/O重定向，但是现在您知道了如何实现它。
-
-文件描述符是一种强大的抽象，因为它们隐藏了它们所连接的内容的细节:一个写入文件描述符1的进程可能正在写入一个文件、一个设备(如控制台)或一个管道；
-
-## 1.3 pipe 管道
-
-pipe是一个小的内核缓冲区，作为一对文件描述符暴露给进程，一个用于读，一个用于写。将数据写入管道的一端，使该数据可用于从管道的另一端读取。管道为进程之间的通信提供了一种方式。
-
-```cpp
-  int p[2];
-  char *argv[2];
-  argv[0] = "wc"; // wc 命令 统计一个文件里字符数，行数等作用
-  argv[1] = 0;
-  pipe(p);
-  if (fork() == 0)
-  {
-    close(0); // 关闭标准输入
-    dup(p[0]);// 拷贝管道读取的fd，此时0就是管道读取的fd：重定向标准输入fd,重定向为管道的输入
-    close(p[0]); //关闭管道读取fd
-    close(p[1]); //关闭管道输出fd
-    exec("/bin/wc", argv); 
-  }
-  else
-  {
-    close(p[0]); //关闭管道读取fd
-    write(p[1], "hello world\n", 12); //想管道中写入helo world
-    close(p[1]); //关闭管道输出fd
-  }
-```
-
-程序调用pipe，它创建一个新的管道，并在数组p中记录读写文件描述符。之后fork，父子进程都有引用管道的文件描述符。子进程将重定向标准输入fd,重定向为管道的读端，关闭文件描述符p和exec("wc",agrv)。当read()从它的标准输入中读取时，它从管道中读取。父进程关闭管道的读端，写入管道，然后关闭写端。
-
-如果没有可用的数据，read()管道读端等待数据被写入或所有指向写端的文件描述符被关闭;在后一种情况下，read将返回0，就好像已经到达了数据文件的末尾一样。事实上，read()一直读不到新数据，一个重要的原因，子进程在执行上面的wc之前就关闭管道的写端:如果wc的文件描述符指向管道的写端，wc永远不会看到文件结束；
-
-xv6 shell 实现管道的方式以类似于上面代码(user/sh.c:100)，像`grep fork sh.c | wc -l`。子进程创建一个管道来连接管道的左端和右端。然后它在管道的左端调用fork()和runcmd()，在管道的右端调用fork()和runcmd（），并等待两者都完成。管道的右端可能是一个本身包含管道的命令(例如，a | b | c)，它本身fork()两个新的子进程(一个是b 一个是c)。因此，shell可能会创建一个进程树。这棵树的叶子是命令，内部节点是等待左子节点和右子节点完成的进程。原则上，您可以让内部节点运行管道的左端，但正确地这样做会使实现复杂化；
-
-管道似乎并不比临时文件更强大:
-
-```cpp
-// pipe
-$ echo hello world | wc
-// file
-$ echo hello world >/tmp/xyz; wc </tmp/xyz
-```
-
-在这种情况下，管道比临时文件至少有四个优点。首先，管道会自动清理;使用文件重定向，shell在删除/tmp/ xyz时必须小心。第二，管道可以传递任意长的数据流，而文件重定向需要磁盘上足够的空闲空间来存储所有的数据。第三，管道允许并行执行（在pipeline会分段执行/传输），而文件方法要求第一个程序在第二个程序开始之前完成。第四，如果你正在实现进程间通信，管道的阻塞读写比文件的非阻塞语义更有效；
-
-## 1.4 file system 文件系统
-
-xv6文件系统提供了数据文件(未解释的字节数组)和目录(包含对数据文件和其他目录的命名引用)。这些目录组成了一个树，从16开始是一个叫做根的特殊目录。像`/a/b/c`这样的路径指的是根目录下的目录a下的目录b下目录c或者文件c。不以/开头的路径相对于调用进程的当前目录进行计算，该目录可以通过chdir系统调用更改。这两个代码片段打开同一个文件(假设所有涉及的目录都存在):
-
-```cpp
-chdir("/a");
-chdir("b");
-open("c", O_RDONLY); // 和上面连用，打开/a/b/c
-
-open("/a/b/c", O_RDONLY);
-```
-
-有多个系统调用来创建一个新的文件或目录:`mkdir`创建一个新的目录，`open`的`O_CREATE`标志创建一个新的数据文件，`mknod`创建一个新的设备文件。这个例子说明了这三种情况:
-
-```cpp
-mkdir("/dir");
-fd = open("/dir/file", O_CREATE|O_WRONLY);
-close(fd);
-mknod("/console", 1, 1);
-```
-
-`Mknod`在文件系统中创建一个文件，但是该文件没有内容。相反，该文件的元数据将其标记为一个设备文件，并记录主设备号和次设备号(mknod的两个参数)，它们唯一地标识一个内核设备。当进程稍后打开文件时，内核将读写系统调用转移到内核设备实现，而不是将它们传递给文件系统。
-
-`Fstat`检索文件描述符所引用对象的信息。它填充一个`struct stat`，在stat.h (kernel/stat.h)中定义为:
-
-```cpp
-#define T_DIR  1  // Directory
-#define T_FILE  2  // File
-#define T_DEVICE  3  // Device
-struct stat {
-int dev;  // File system’s disk device
-uint ino;  // Inode number
-short type;  // Type of file
-short nlink; // Number of links to file
-uint64 size; // Size of file in bytes
-};
-```
-
-文件名与文件本身不同;同一个底层文件(称为inode)可以有多个名称，称为链接。`link()`系统调用创建另一个文件系统名，引用与现有文件相同的索引节点。这个片段创建了一个名为a和b的新文件。
-
-```cpp
-open("a", O_CREATE|O_WRONLY);
-link("a", "b");
-```
-
-对a的读写操作与对b的读写操作相同。每个inode由唯一的inode号标识。在上面的代码序列之后，可以通过检查`stat`的结果来确定a和b引用的是相同的底层内容:两者都将返回相同的inode号(ino)，并且nlink计数将被设置为2。
-
-`unlink`系统调用从文件系统中删除一个名称。**只有当文件的链接计数为零且没有文件描述符引用它时，文件的inode和存储其内容的磁盘空间才会被释放**。因此增加
-`unlink(a)`,索引节点和文件内容都可以通过b访问,直到执行了unlink之后，才不能访问；
-
-此外，
-```cpp
-fd = open("/tmp/xyz", O_CREATE|O_RDWR);
-unlink("/tmp/xyz");
-```
-
-
+3. 单词
+    >amusement [ə'mjuzmənt] 娱乐
+ 
+    >assignment [ə'saɪnmənt] 任务，作业
+
+4. vi 跳转到指定行号：
+
+    ```cpp
+    // 第一种方式
+    $ vi makefile
+    $:n //n 为行号
+
+    // 第二种方式
+    $ vi +169 makefile // 打开makefile 直接跳转到169行
+    ```
+
+5. 在当前文件夹下的所有文件内寻找包含3G的文件并打印出行号
+  
+    ```cpp
+    // 在当前文件夹下寻找包含3G的行号
+    $ grep 3G . -rn
+    ```
+      按照作业一开始，需要切换到util分支，切换之后，执行make，make qemu; 发现启动不了，内存溢出,报错信息如下，解决过程也附在下面：
+    ```c
+    // make qemu 报错信息
+    qemu-system-riscv64 -machine virt -kernel kernel/kernel -m 3G -smp 3 -nographic -drive file=fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
+    qemu-system-riscv64: cannot set up guest memory 'riscv_virt_board.ram': Cannot allocate memory
+    make: *** [qemu] Error 1
+    // 查看下自己的内存大小，剩余654M，果然不够3G，毕竟是虚拟机
+    moocos-> free -h
+                total       used       free     shared    buffers     cached
+    Mem:          3.4G       2.7G       654M        14M       242M       1.6G
+    -/+ buffers/cache:       952M       2.4G
+    Swap:           0B         0B         0B
+    // 查看下是哪里写着3G的内存，发现是makefile文件
+    moocos-> grep 3G -rn
+    Makefile:169:QEMUOPTS = -machine virt -kernel $K/kernel -m 3G -smp $(CPUS) -nographic
+    ```
+    到这里已经排查到是makefile 文件里设定的3G的启动内存大小，vi进去修改3G为128M，然后make clean,make, make qemu,搞定；
+
+
+附提问解答：
+
+1. 学生提问：为什么父进程在子进程调用exec之前就打印了“parent waiting”？
+    > Robert教授：这里只是巧合。父进程的输出有可能与子进程的输出交织在一起，就像我们之前在fork的例子中看到的一样，只是这里正好没有发生而已。并不是说我们一定能看到上面的输出，实际上，如果看到其他的输出也不用奇怪。我怀疑这里背后的原因是，exec系统调用代价比较高，它需要访问文件系统，访问磁盘，分配内存，并读取磁盘中echo文件的内容到分配的内存中，分配内存又可能需要等待内存释放。所以，exec系统调用背后会有很多逻辑，很明显，处理这些逻辑的时间足够长，这样父进程可以在exec开始执行echo指令之前完成输出。这样说得通吧？
+2. 学生提问：子进程可以等待父进程吗？
+    >Robert教授：Unix并没有一个直接的方法让子进程等待父进程。wait系统调用只能等待当前进程的子进程。所以wait的工作原理是，如果当前进程有任何子进程，并且其中一个已经退出了，那么wait会返回。但是如果当前进程没有任何子进程，比如在这个简单的例子中，如果子进程调用了wait，因为子进程自己没有子进程了，所以wait会立即返回-1，表明出现错误了，当前的进程并没有任何子进程。
+  **简单来说，不可能让子进程等待父进程退出。**
+3. 学生提问：当我们说子进程从父进程拷贝了所有的内存，这里具体指的是什么呢？是不是说子进程需要重新定义变量之类的？
+    >Robert教授：在编译之后，你的C程序就是一些在内存中的指令，这些指令存在于内存中。所以这些指令可以被拷贝，因为它们就是内存中的字节，它们可以被拷贝到别处。通过一些有关虚拟内存的技巧，可以使得子进程的内存与父进程的内存一样，这里实际就是将父进程的内存镜像拷贝给子进程，并在子进程中执行。
+  实际上，当我们在看C程序时，你应该认为它们就是一些机器指令，这些机器指令就是内存中的数据，所以可以被拷贝。
+4. 学生提问：如果父进程有多个子进程，wait是不是会在第一个子进程完成时就退出？这样的话，还有一些与父进程交错运行的子进程，是不是需要有多个wait来确保所有的子进程都完成？
+    >Robert教授：是的，如果一个进程调用fork两次，如果它想要等两个子进程都退出，它需要调用wait两次。每个wait会在一个子进程退出时立即返回。当wait返回时，你实际上没有必要知道哪个子进程退出了，但是wait返回了子进程的进程号，所以在wait返回之后，你就可以知道是哪个子进程退出了。
+
+## 三. 作业
+
+1. 实现sleep
+
+Implement the UNIX program sleep for xv6; your sleep should pause for a user-specified number of ticks. (A tick is a notion of time defined by the xv6 kernel, namely the time between two interrupts from the timer chip.) Your solution should be in the file user/sleep.c. 我的代码应该写到 user/sleep.c里面
+
+Some hints:
+
+Look at some of the other programs in user/ to see how you can obtain the command-line arguments passed to a program. If the user forgets to pass an argument, sleep should print an error message. 我可以看看user下的其它文件，看看是怎么获取命令行参数，记得对空参数的处理
+The command-line argument is passed as a string; you can convert it to an integer using atoi (see user/ulib.c).
+Use the system call sleep (see user/usys.S and kernel/sysproc.c). sleep功能最终应该调用 系统调用sleep 
+Make sure main calls exit() in order to exit your program. 调用exit()确保自己的程序最后要退出
+Add the program to UPROGS in Makefile and compile user programs by typing make fs.img. 把自己的程序写到makefile里
+Look at Kernighan and Ritchie's book The C programming language (second edition) (K&R) to learn about C. 跟着大佬的书学习C语言
+
+先来看第一个事，怎么获取命令行参数
