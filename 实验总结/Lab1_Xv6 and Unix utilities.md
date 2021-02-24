@@ -132,7 +132,7 @@ Use read to read from the pipe, and write to write to the pipe.
 3. 实现 primes
 
 Write a concurrent version of prime sieve using pipes. This idea is due to Doug McIlroy, inventor of Unix pipes. The picture halfway down this page<https://swtch.com/~rsc/thread/> and the surrounding text explain how to do it. Your solution should be in the file user/primes.c.
-使用pipes写一个素数(质数)筛选器，放在primes.c文件里
+使用pipes写一个并发版本的素数(质数)筛选器，放在primes.c文件里
 
 Your goal is to use pipe and fork to set up the pipeline. The first process feeds the numbers 2 through 35 into the pipeline. For each prime number, you will arrange to create one process that reads from its left neighbor over a pipe and writes to its right neighbor over another pipe. Since xv6 has limited number of file descriptors and processes, the first process can stop at 35.
 

@@ -32,88 +32,88 @@ p =从左邻居得到一个数字
 
 
 
-The linear pipeline nature of the examples thus far is misrepresentative of the general nature of CSP, but even restricted to linear pipelines, the model is quite powerful. The power has been forcefully demonstrated by the success of the filter-and-pipeline approach for which the Unix operating system is well known [2] Indeed, pipelines predate Hoare's paper. In an internal Bell Labs memo dated October 11, 1964, Doug McIlroy was toying with ideas that would become Unix pipelines: “We should have some ways of coupling programs like garden hose--screw in another segment when it becomes necessary to massage data in another way. This is the way of IO also.” [3]
+到目前为止，示例的线性管线性质不能正确代表CSP的一般性质，但即使限于线性管线，该模型也非常强大。Unix操作系统众所周知的过滤器和管道方法的成功已经有力地证明了这种能力。 [2] 实际上，管道早于Hoare的论文。在1964年10月11日的贝尔实验室内部备忘录中，道格·麦克罗伊（Doug McIlroy）玩弄了将成为Unix管道的想法：“我们应该有一些耦合程序的方法，例如花园软管，当有必要对数据进行按摩时，将其拧入另一个部分。其他方式。这也是IO的方式。” [3]
 
-Hoare's communicating processes are more general than typical Unix shell pipelines, since they can be connected in arbitrary patterns. In fact, Hoare gives as an example a 3x3 matrix of processes somewhat like the prime sieve that can be used to multiply a vector by a 3x3 square matrix.
+Hoare的通信过程比典型的Unix Shell管道更通用，因为它们可以以任意模式连接。实际上，Hoare给出了一个3x3的处理矩阵示例，该矩阵有点像素筛，可用于将矢量乘以3x3的正方形矩阵。
 
-Of course, the Unix pipe mechanism doesn't require the linear layout; only the shell syntax does. McIlroy reports toying with syntax for a shell with general plumbing early on but not liking the syntax enough to implement it (personal communication, 2011). Later shells did support some restricted forms of non-linear pipelines. Rochkind's 2dsh supports dags; Tom Duff's rc supports trees.
+当然，Unix管道机制不需要线性布局。只有shell语法可以。McIlroy报告说，早期使用通用语法对外壳的语法进行了玩弄，但对语法的接受程度不足以实现它（个人交流，2011年）。后来的外壳确实支持非线性管道的某些受限形式。Rochkind的2dsh支持dags；汤姆·达夫（Tom Duff）的rc支持树木。
 
-Hoare's language was novel and influential, but lacking in a few key aspects. The main defect is that the unbuffered channels used for communication are not first-class objects: they cannot be stored in variables, passed as arguments to functions, or sent across channels. As a result of this, the communication structure must be fixed while writing the program. Hence we must write a program to print the first 1000 primes rather than the first n primes, and to multiply a vector by a 3x3 matrix rather than an nxn matrix.
+Hoare的语言新颖新颖，很有影响力，但缺乏一些关键方面。主要缺陷是用于通信的未缓冲通道不是一流的对象：它们不能存储在变量中，不能作为参数传递给函数或跨通道发送。结果，在编写程序时必须固定通信结构。因此，我们必须编写一个程序来打印前1000个素数，而不是前n个素数，并将向量乘以3x3矩阵而不是n x n矩阵。
 
-Pan and Promela
+潘与普罗梅拉
 
-In 1980, barely two years after Hoare's paper, Gerard Holzmann and Rob Pike created a protocol analyzer called pan that takes a CSP dialect as input. Pan's CSP dialect had concatenation, selection, and looping, but no variables. Even so, Holzmann reports that “Pan found its first error in a Bell Labs data-switch control protocol on 21 November 1980. ” [14]. That dialect may well have been the first CSP language at Bell Labs, and it certainly provided Pike with experience using and implementing a CSP-like language, his first of many.
+1980年，距Hoare的论文发表仅短短两年时间，Gerard Holzmann和Rob Pike创建了一个协议分析器，称为pan，它将CSP方言作为输入。Pan的CSP方言具有串联，选择和循环的功能，但是没有变量。即便如此，霍尔兹曼报告说：“潘在1980年11月21日的Bell Labs数据交换控制协议中发现了它的第一个错误。” [14]。该方言很可能是Bell Labs的第一种CSP语言，它无疑为Pike提供了使用和实现类似CSP的语言的经验，这是他的第一种语言。
 
-Holzmann's protocol analyzer developed into the Spin model checker and its Promela language, which features first-class channels in the same way as Newsqueak (q.v.).
+Holzmann的协议分析仪已发展为Spin模型检查器及其Promela语言，它具有与Newsqueak（qv）相同的一流频道。
 
-Newsqueak
+新闻快讯
 
-Moving in a different direction, Luca Cardelli and Rob Pike developed the ideas in CSP into the Squeak mini-language [4] for generating user interface code. (This Squeak is distinct from the Squeak Smalltalk implementation.) Pike later expanded Squeak into the fully-fledged programming language Newsqueak [5][6] which begat Plan 9's Alef [7] [8], Inferno's Limbo [9], and Google's Go [13]. The main semantic advantage of Newsqueak over Squeak is that Newsqueak treats communications channels as first-class objects: unlike in CSP and Squeak, channels can be stored in variables, passed as arguments to functions, and sent across channels. This in turn enables the programmatic construction of the communication structure, thus allowing the creation of more complex structures than would be reasonable to design by hand. In particular, Doug McIlroy demonstrated how the communication facilities of Newsqueak can be employed to write elegant programs for manipulating symbolic power series [10]. Similar attempts in traditional languages tend to mire in bookkeeping. In a similar vein, Rob Pike demonstrated how the communication facilities can be employed to break out of the common event-based programming model, writing a concurrent window system [11].
+朝着不同的方向发展，Luca Cardelli和Rob Pike将CSP中的思想发展成Squeak微型语言 [4]， 用于生成用户界面代码。（此Squeak与Squeak Smalltalk实现不同。）Pike随后将Squeak扩展为成熟的编程语言Newsqueak [5] [6] ，该语言源自 Plan 9的Alef [7] [8]，Inferno的Limbo [9]和Google的去 [13]。相较于Squeak，Newsqueak的主要语义优势在于Newsqueak将通信渠道视为一流的对象：与CSP和Squeak不同，渠道 可以 被存储在变量中，作为参数传递给函数，并通过通道发送。这继而实现了通信结构的程序化构造，从而允许创建比手工设计合理的结构更复杂的结构。尤其是，道格·麦克罗伊（Doug McIlroy）演示了如何利用Newsqueak的通讯工具编写精美的程序来处理符号幂级数 [10]。传统语言中的类似尝试往往会使簿记工作陷入困境。同样，罗伯·派克（Rob Pike）演示了如何利用通信工具来突破常见的基于事件的编程模型，并编写了并发窗口系统 [11]。
 
-Alef
+阿列夫
 
-Alef [7] [8] was a language designed by Phil Winterbottom to apply the Newsqueak ideas to a full-fledged systems programming language. Alef has two types of what we have been calling processes: procs and threads. The program is organized into one or more procs, which are shared-memory operating system processes that can be preemptively scheduled. Each proc contains one or more tasks, which are cooperatively scheduled coroutines. Note that each task is assigned to a particular proc: they do not migrate between procs.
+Alef [7] [8] 是由Phil Winterbottom设计的一种语言，用于将Newsqueak的思想应用于成熟的系统编程语言。Alef有两种我们称为进程的类型：proc和线程。该程序被组织为一个或多个proc，它们是可以抢先调度的共享内存操作系统进程。每个proc包含一个或多个任务，这些任务是协同调度的协程。请注意，每个任务都分配给一个特定的proc：它们不会在proc之间迁移。
 
-The main use of procs is to provide contexts that can block for I/O independently of the main tasks. (Plan 9 has no select call, and even on Unix you need multiple procs if you want to overlap computation with non-network I/O.) The Acme paper [12] has a nice brief discussion of procs and threads, as do the lecture notes about the Plan 9 window system, also mentioned below.
+proc的主要用途是提供可以独立于主要任务而阻止I / O的上下文。（Plan 9有没有选择调用，甚至在Unix上，如果你想与非网络I / O重叠计算你需要多个特效。）Acme的论文 [12] 有特效和线程的一个很好的简短的讨论，因为这样做 的关于Plan 9窗口系统的讲义，也将在下面提及。
 
-Limbo
+凌波
 
-The Inferno operating system is a Plan 9 spinoff intended for set-top boxes. Its programming language, Limbo [9], was heavily influenced by Alef. It removed the distinction between procs and tasks, effectively having just procs, though they were of lighter weight than what most people think of as processes. All parallelism is preemptive. It is interesting that despite this, the language provides no real support for locking. Instead, the channel communication typically provides enough synchronization and encourages programmers to arrange that there is always a clear owner for any piece of data. Explicit locking is unnecessary.
+Inferno操作系统是计划9衍生产品，用于机顶盒。它的编程语言Limbo [9]受Alef的影响很大。它消除了proc和任务之间的区别，实际上仅包含proc，尽管它们的权重比大多数人认为的流程轻。所有并行性都是抢先的。有趣的是，尽管如此，该语言仍未提供对锁定的真正支持。取而代之的是，通道通信通常提供足够的同步，并鼓励程序员安排任何数据始终拥有明确的所有者。不需要明确的锁定。
 
-Libthread
+线程线程
 
-Back in the Plan 9 world, the Alef compilers turned out to be difficult to maintain as Plan 9 was ported to ever more architectures. Libthread was originally created to port Alef programs to C, so that the Alef compilers could be retired. Alef's procs and tasks are called procs and threads in libthread. The manual page is the definitive reference.
+回到计划9的世界，随着计划9移植到越来越多的体系结构上，Alef编译器变得难以维护。最初创建Libthread是为了将Alef程序移植到C，以便可以淘汰Alef编译器。Alef的proc和任务在libthread中称为proc和线程。该手册 是最权威的参考。
 
-Go
+去
 
-Rob Pike and Ken Thompson moved on to Google and placed CSP at the center of the Go language's concurrency support.
+Rob Pike和Ken Thompson转到了Google，并将CSP置于Go语言并发支持的中心。
 
-Getting Started
+入门
 
-To get a feel for the model, especially how processes and threads interact, it is worth reading the Alef User's Guide [8]. The first thirty slides of this presentation are a good introduction to how Alef constructs are represented in C.
+为了对模型有所了解，特别是进程和线程如何交互，值得阅读《 Alef用户指南》 [8]。此演示文稿的前三十张幻灯片 很好地介绍了如何在C中表示Alef构造。
 
-The best examples of the power of the CSP model are McIlroy's and Pike's papers, mentioned above [10] [11].
+CSP模型功能的最好例子是上文提到的McIlroy和Pike的论文 [10] [11]。
 
-Rob Pike's home page contains lecture notes from a course on concurrent programming: an introduction, and slides about the two aforementioned papers: squinting and window system. The last of the three provides a good example of how Plan 9 programs typically use procs and tasks.
+Rob Pike的主页包含有关并发编程的课程的讲义： 简介，并介绍了上述两篇论文的幻灯片： 斜视 和 窗口系统。这三个中的最后一个提供了一个很好的示例，说明了Plan 9程序通常如何使用proc和任务。
 
-Rob Pike gave a tech talk at Google that provides a good introduction (57 minute video).
+罗伯·派克（Rob Pike）在Google 上进行了一次 技术演讲，提供了很好的介绍（57分钟的视频）。
 
-Rob Pike's half of his 2010 Google I/O talk with Russ Cox shows how to use channels and Go's concurrency to implement a load balancing work management system.
+Rob Pike在2010年与Ru​​ss Cox进行的Google I / O演讲中的一半 展示了如何使用通道和Go的并发性来实现负载平衡工作管理系统。
 
-Related Resources
+相关资源
 
-John Reppy has applied the same ideas to ML, producing Concurrent ML. He used CML to build, among other things, the eXene multithreaded (non-event-driven) X Window System toolkit.
+John Reppy将相同的思想应用于ML，从而产生了Concurrent ML。他使用CML来构建eXene多线程（非事件驱动）X Window System工具箱。
 
-References
+参考
 
-[1] C. A. R. Hoare, “Communicating Sequential Processes,” Communications of the ACM 21(8) (August 1978), 666-677.
+[1] CAR Hoare，《通信顺序过程》 ，ACM通讯 21（8）（1978年8月），第666-677页。
 
-[1a]C. A. R. Hoare, Communicating Sequential Processes. Prentice Hall, Englewood Cliffs, New Jersey, 1985.
+[1a] CAR Hoare， 沟通顺序过程。普伦蒂斯·霍尔（Prentice Hall），新泽西州恩格尔伍德悬崖（Englewood Cliffs），1985年。
 
-[2] Michael S. Mahoney, ed., The Unix Oral History Project, Release 0: The Beginning
+[2] Michael S. Mahoney编辑， 《 Unix口述历史项目，第0版：开始》
 
-[3] M. Douglas McIlroy, internal Bell Labs memorandum, October 1964.
+[3] 道格拉斯·麦克罗伊（M. Douglas McIlroy）， 贝尔实验室内部备忘录，1964年10月。
 
-[4] Luca Cardelli and Rob Pike, “Squeak: a Language for Communicating with Mice,” Computer Graphics, 19(3) (July 1985: SIGGRAPH '85 Proceedings), 199-204.
+[4] 卢卡·卡德利（Luca Cardelli）和罗伯·派克（Rob Pike）， “吱吱声：一种与小鼠交流的语言”，《 计算机图形学》，19（3）（1985年7月：SIGGRAPH '85会议论文集），第199-204页。
 
-[5] Rob Pike, “The Implementation of Newsqueak,” Software--Practice and Experience, 20(7) (July 1990), 649-659.
+[5] Rob Pike， “ Newsqueak的实现”， 软件-实践与经验，20（7）（1990年7月），649-659。
 
-[6] Rob Pike, “Newsqueak: a Language for Communicating with Mice,” Computing Science Technical Report 143, AT&T Bell Laboratories, Murray Hill, 1989.
+[6] Rob Pike， “ Newsqueak：一种与小鼠交流的语言”， 计算机科学技术报告143，AT＆T贝尔实验室，默里·希尔，1989年。
 
-[7] Phil Winterbottom, “Alef Language Reference Manual,” in Plan 9 Programmer's Manual: Volume Two, AT&T, Murray Hill, 1995.
+[7] Phil Winterbottom， “ Alef语言参考手册” ， Plan 9程序员手册：第二卷，AT＆T，Murray Hill，1995年。
 
-[8] Bob Flandrena, “Alef Users' Guide,” in Plan 9 Programmer's Manual: Volume Two, AT&T, Murray Hill, 1995.
+[8] 鲍勃Flandrena， “Alef的用户指南，” 在 计划9程序员手册：第二卷，AT＆T，美利山，1995年。
 
-[9] Dennis M. Ritchie, “The Limbo Programming Language,” in Inferno Programmer's Manual, Volume 2, Vita Nuova Holdings Ltd., York, 2000.
+[9] Dennis M. Ritchie， “ The Limbo编程语言”， 在 Inferno程序员手册，第2卷，Vita Nuova Holdings Ltd.，约克，2000年。
 
-[10] M. Douglas McIlroy, “Squinting at Power Series,” Software--Practice and Experience, 20(7) (July 1990), 661-683.
+[10] M. Douglas McIlroy， “在电源系列上斜眼看”， 软件－实践和经验，20（7）（1990年7月），661-683。
 
-[11] Rob Pike, “A Concurrent Window System,” Computing Systems, 2(2) 133-153.
+[11] Rob Pike， “并发窗口系统”， 计算系统，2（2）133-153。
 
-[12] Rob Pike, “Acme: A User Interface for Programmers,” Proceedings of the Winter 1994 USENIX Conference, 223-234.
+[12] Rob Pike， “ Acme：程序员的用户界面” ，1994年冬季USENIX会议论文集，223-234。
 
-[13] golang.org, “The Go Programming Language”.
+[13] golang.org， “ Go编程语言”。
 
-[14] Gerard Holzmann, “Spin's Roots”.
+[14] Gerard Holzmann，“自旋的根源”。
 
-[15] Gerard Holzmann, “Promela Language Reference”.
+[15] Gerard Holzmann，“ Promela语言参考”。
