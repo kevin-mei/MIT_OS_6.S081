@@ -95,4 +95,52 @@ Make sure main calls exit() in order to exit your program. 调用exit()确保自
 Add the program to UPROGS in Makefile and compile user programs by typing make fs.img. 把自己的程序写到makefile里
 Look at Kernighan and Ritchie's book The C programming language (second edition) (K&R) to learn about C. 跟着大佬的书学习C语言
 
-先来看第一个事，怎么获取命令行参数
+```cpp
+// user/sleep.c
+#include "kernel/types.h"
+#include "user/user.h"
+
+int main(int argc, char *argv[])
+{
+    if (argc <= 1)
+    {
+        printf("error: too few argvment!\n");
+        exit();
+    }
+
+    int nsleep = atoi(argv[1]);
+    sleep(nsleep);
+    exit();
+}
+```
+在util分支下，新建属于自己的util分支，新建user/sleep.c文件，它编译之后，生成sleep文件；
+xv6启动之后，shell输入sleep,就是运行上面编译后的文件；所以`sleep 10`这样的命令行参数，使用main函数的入参就可以了；
+这里argc(入参的数量)包含sleep本身，所以`argv[0] = "sleep"`, `argv[1] = "10"`;
+然后根据提示，调用`atoi`和`sleep(int n)`即可；这个sleep 参数应该是多少s，我测试的时候，感觉并没有10s；
+
+2. 实现pingpong
+
+Write a program that uses UNIX system calls to ``ping-pong'' a byte between two processes over a pair of pipes, one for each direction. The parent sends by writing a byte to parent_fd[1] and the child receives it by reading from parent_fd[0]. After receiving a byte from parent, the child responds with its own byte by writing to child_fd[1], which the parent then reads. Your solution should be in the file user/pingpong.c.
+用一对管道(管道是单向的,但是它的文件在两个进程可以是共享的，所以只需要pipe一次即可)实现ping-pong操作，
+Some hints:
+
+Use pipe to create a pipe.
+Use fork to create a child.
+Use read to read from the pipe, and write to write to the pipe.
+
+
+3. 实现 primes
+
+Write a concurrent version of prime sieve using pipes. This idea is due to Doug McIlroy, inventor of Unix pipes. The picture halfway down this page<https://swtch.com/~rsc/thread/> and the surrounding text explain how to do it. Your solution should be in the file user/primes.c.
+使用pipes写一个素数(质数)筛选器，放在primes.c文件里
+
+Your goal is to use pipe and fork to set up the pipeline. The first process feeds the numbers 2 through 35 into the pipeline. For each prime number, you will arrange to create one process that reads from its left neighbor over a pipe and writes to its right neighbor over another pipe. Since xv6 has limited number of file descriptors and processes, the first process can stop at 35.
+
+
+Some hints:
+
+Be careful to close file descriptors that a process doesn't need, because otherwise your program will run xv6 out of resources before the first process reaches 35.及时关闭当前进程不用的文件描述符
+Once the first process reaches 35, you should arrange that the pipeline terminates cleanly, including all children (Hint: read will return an end-of-file when the write-side of the pipe is closed).
+It's simplest to directly write 32-bit ints to the pipes, rather than using formatted ASCII I/O.
+You should create the processes in the pipeline as they are needed.
+最简单的是直接给pipe写32bit的整形数据，而不是格式化过的ascii码
