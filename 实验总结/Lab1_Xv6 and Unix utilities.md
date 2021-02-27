@@ -83,64 +83,392 @@
 ## 三. 作业
 
 1. 实现sleep
+    >Implement the UNIX program sleep for xv6; your sleep should pause for a user-specified number of ticks. (A tick is a notion of time defined by the xv6 kernel, namely the time between two interrupts from the timer chip.) Your solution should be in the file user/sleep.c. 我的代码应该写到 user/sleep.c里面
 
-Implement the UNIX program sleep for xv6; your sleep should pause for a user-specified number of ticks. (A tick is a notion of time defined by the xv6 kernel, namely the time between two interrupts from the timer chip.) Your solution should be in the file user/sleep.c. 我的代码应该写到 user/sleep.c里面
+    > 提示:
+    a. Look at some of the other programs in user/ to see how you can obtain the command-line arguments passed to a program. If the user forgets to pass an argument, sleep should print an error message. 我可以看看user下的其它文件，看看是怎么获取命令行参数，记得对空参数的处理
 
-Some hints:
+    >The command-line argument is passed as a string; you can convert it to an integer using atoi (see user/ulib.c).
+    Use the system call sleep (see user/usys.S and kernel/sysproc.c). sleep功能最终应该调用 系统调用sleep 
+    
+    >Make sure main calls exit() in order to exit your program. 调用exit()确保自己的程序最后要退出
 
-Look at some of the other programs in user/ to see how you can obtain the command-line arguments passed to a program. If the user forgets to pass an argument, sleep should print an error message. 我可以看看user下的其它文件，看看是怎么获取命令行参数，记得对空参数的处理
-The command-line argument is passed as a string; you can convert it to an integer using atoi (see user/ulib.c).
-Use the system call sleep (see user/usys.S and kernel/sysproc.c). sleep功能最终应该调用 系统调用sleep 
-Make sure main calls exit() in order to exit your program. 调用exit()确保自己的程序最后要退出
-Add the program to UPROGS in Makefile and compile user programs by typing make fs.img. 把自己的程序写到makefile里
-Look at Kernighan and Ritchie's book The C programming language (second edition) (K&R) to learn about C. 跟着大佬的书学习C语言
+    >Add the program to UPROGS in Makefile and compile user programs by typing make fs.img. 把自己的程序写到makefile里的`UPROGS=`，并且使用`make fs.img` 进行编译
+    
+    >Look at Kernighan and Ritchie's book The C programming language (second edition) (K&R) to learn about C. 跟着大佬的书学习C语言
 
-```cpp
-// user/sleep.c
-#include "kernel/types.h"
-#include "user/user.h"
+    ```cpp
+    // user/sleep.c
+    #include "kernel/types.h"
+    #include "user/user.h"
 
-int main(int argc, char *argv[])
-{
-    if (argc <= 1)
+    int main(int argc, char *argv[])
     {
-        printf("error: too few argvment!\n");
+        if (argc <= 1)
+        {
+            printf("usage: sleep seconds!\n");
+            exit();
+        }
+
+        int nsleep = atoi(argv[1]);
+        sleep(nsleep);
         exit();
     }
-
-    int nsleep = atoi(argv[1]);
-    sleep(nsleep);
-    exit();
-}
-```
-在util分支下，新建属于自己的util分支，新建user/sleep.c文件，它编译之后，生成sleep文件；
+    ```
+    >在util分支下，新建属于自己的util分支，新建user/sleep.c文件，它编译之后，生成sleep文件；
 xv6启动之后，shell输入sleep,就是运行上面编译后的文件；所以`sleep 10`这样的命令行参数，使用main函数的入参就可以了；
 这里argc(入参的数量)包含sleep本身，所以`argv[0] = "sleep"`, `argv[1] = "10"`;
-然后根据提示，调用`atoi`和`sleep(int n)`即可；这个sleep 参数应该是多少s，我测试的时候，感觉并没有10s；
+然后根据提示，调用`atoi`和`sleep(int n)`即可；这个sleep 参数在正常linux下应该是多少s，这里的参数是tick，解释为时钟，sleep 10感觉并没有10s，先不做深究；
+测试的时候，可以运行`./grade-lab-util sleep`进行测试，下面例子的也是一样；
 
-2. 实现pingpong
+1. 实现pingpong
 
-Write a program that uses UNIX system calls to ``ping-pong'' a byte between two processes over a pair of pipes, one for each direction. The parent sends by writing a byte to parent_fd[1] and the child receives it by reading from parent_fd[0]. After receiving a byte from parent, the child responds with its own byte by writing to child_fd[1], which the parent then reads. Your solution should be in the file user/pingpong.c.
-用一对管道(管道是单向的,但是它的文件在两个进程可以是共享的，所以只需要pipe一次即可)实现ping-pong操作，
-Some hints:
+    >Write a program that uses UNIX system calls to ``ping-pong'' a byte between two processes over a pair of pipes, one for each direction. The parent sends by writing a byte to parent_fd[1] and the child receives it by reading from parent_fd[0]. After receiving a byte from parent, the child responds with its own byte by writing to child_fd[1], which the parent then reads. Your solution should be in the file user/pingpong.c.
 
-Use pipe to create a pipe.
-Use fork to create a child.
-Use read to read from the pipe, and write to write to the pipe.
+    >用一对管道(管道是单向的,一个进程只处理管道读或者写端，不能同时处理读或者写，不然没人知道你写的数据是要发给另一个进程还是发给你自己；所以这里需需要pipe()两次使用两个管道)实现ping-pong操作，
 
+    ```cpp
+    #include "kernel/types.h"
+    #include "user/user.h"
 
-3. 实现 primes
+    int main(int argc, char *argv[])
+    {
+        int parient_fds[2], child_fds[2];
+        // create a pipe, with two FDs in fds[0], fds[1].
+        pipe(parient_fds);
+        pipe(child_fds);
+        int pid;
+        pid = fork();
+        char buff[100];
+        if(0 == pid)
+        {
+            // 子进程 这里不关闭不用的文件描述符parient_fds[0]，本身这个程序使用不多，就没关，等程序退出时自行处理, 写这个程序的时候，也没有意识到需要关闭不用的fd，primes里就需要关闭里
+            write(parient_fds[1], "ping\n", 5);
+            read(child_fds[0], buff, sizeof(buff)); // 阻塞，等待父进程写入pong
+            printf("3: received %s", buff);// 写入pong的时候已经加\n，所以这里打印的时候，不用加\n
+            exit();
+        }else
+        {
+            // 父进程
+            read(parient_fds[0], buff, sizeof(buff));
+            printf("4: received %s", buff);
+            write(child_fds[1], "pong\n", 5);
+            wait();
+        }
+        
+        exit();
+    }
+    ```
 
-Write a concurrent version of prime sieve using pipes. This idea is due to Doug McIlroy, inventor of Unix pipes. The picture halfway down this page<https://swtch.com/~rsc/thread/> and the surrounding text explain how to do it. Your solution should be in the file user/primes.c.
-使用pipes写一个并发版本的素数(质数)筛选器，放在primes.c文件里
+2. 实现 primes
 
-Your goal is to use pipe and fork to set up the pipeline. The first process feeds the numbers 2 through 35 into the pipeline. For each prime number, you will arrange to create one process that reads from its left neighbor over a pipe and writes to its right neighbor over another pipe. Since xv6 has limited number of file descriptors and processes, the first process can stop at 35.
+    >Write a concurrent version of prime sieve using pipes. This idea is due to Doug McIlroy, inventor of Unix pipes. The picture halfway down this page<https://swtch.com/~rsc/thread/> and the surrounding text explain how to do it. Your solution should be in the file user/primes.c.
+    使用pipes写一个并发版本的素数(质数)筛选器，放在primes.c文件里
 
+    ```cpp
+    #include "kernel/types.h"
+    #include "user/user.h"
 
-Some hints:
+    // createprocess 要做的事情: 保存当前进程的数，当前的进程，只留存自己第一次接收到的数字
+    // 然后判断之后接收到的数字，能不能被第一次接受到的数组整除
+    // 如果可以，则忽略，不可以，则传递到下一个进程
+    void createprocess(int parent_fds[2])
+    {
+      int fixNum = 0; // 只留存自己第一次接收到的数字
+      // 从传入的parent_fds的读端，读取一个数字, 如果本地没有
+      close(parent_fds[1]); // 用不着paren_fds的写端，直接关闭
+      int curNum = 0;
+      if (read(parent_fds[0], &curNum, sizeof(curNum)))
+      {
+        fixNum = curNum;
+        printf("prime %d\n", fixNum);
+      }
+      int child_fds[2];
+      pipe(child_fds);
+      if (0 != read(parent_fds[0], &curNum, sizeof(curNum)))
+      {
+        int pid = fork();
+        if(pid < 0)
+        {
+          exit();
+        }else if (0 == pid)
+        { // 子进程中递归调用createprocess
+          createprocess(child_fds);
+        }
+        else
+        { // 父进程
+          close(child_fds[0]); // 关闭child_fds读端
+          do{
+            // 需要将当前进程的curNum传递给子进程
+            if(0 != curNum % fixNum) // 判断读到的curNum能否被当前进程的素数整除
+              write(child_fds[1], &curNum, sizeof(curNum));
+          }while(read(parent_fds[0], &curNum, sizeof(curNum)));
+        }
+      }
+      exit();
+    }
 
-Be careful to close file descriptors that a process doesn't need, because otherwise your program will run xv6 out of resources before the first process reaches 35.及时关闭当前进程不用的文件描述符
-Once the first process reaches 35, you should arrange that the pipeline terminates cleanly, including all children (Hint: read will return an end-of-file when the write-side of the pipe is closed).
-It's simplest to directly write 32-bit ints to the pipes, rather than using formatted ASCII I/O.
-You should create the processes in the pipeline as they are needed.
-最简单的是直接给pipe写32bit的整形数据，而不是格式化过的ascii码
+    int main(int argc, char *argv[])
+    {
+      // main 函数这里，直接写创建子进程，在父进程写2-35的数字给子进程
+      int parent_fds[2];
+      pipe(parent_fds);
+
+      int pid = fork();
+      if(0 == pid)
+      {
+        createprocess(parent_fds);
+        exit();
+      }else
+      {
+        close(parent_fds[0]);
+        for(int i = 2;i < 36;i++)
+        {
+          write(parent_fds[1], &i, sizeof(i));
+        }
+        close(parent_fds[1]);
+      }
+      wait();
+      exit();
+    }
+
+    ```
+
+3. 实现 find
+
+    >Write a simple version of the UNIX find program: find all the files in a directory tree whose name matches a string. Your solution should be in the file user/find.c.
+
+    >写一个简单版本的find程序，在一个文件夹里找出所有的文件名和给定string匹配的文件
+    下面的代码主要关注find的逻辑处理，这里抄ls的实现，注意
+    a. 打印结果的时候需要打印完整路径，而不是文件名；判断文件名包含string的时候，使用文件名
+    b. 递归进子目录时，使用strcmp跳过“.”和“..”
+
+    ```cpp
+    #include "kernel/types.h"
+    #include "kernel/stat.h"
+    #include "user/user.h"
+    #include "kernel/fs.h"
+
+    char buf[1024];
+    int match(char *, char *);
+
+    char *
+    fmtname(char *path)
+    {
+      static char buf[DIRSIZ + 1];
+      char *p;
+
+      // Find first character after last slash.
+      for (p = path + strlen(path); p >= path && *p != '/'; p--)
+        ;
+      p++;
+
+      // Return blank-padded name.
+      if (strlen(p) >= DIRSIZ)
+        return p;
+      memmove(buf, p, strlen(p));
+      memset(buf + strlen(p), ' ', DIRSIZ - strlen(p));
+      return buf;
+    }
+
+    // 打印path下文件名包含匹配pattern的文件全路径
+    void find(char *path, char *pattern)
+    {
+      char buf[512], *p;
+      int fd;
+      struct dirent de;
+      struct stat st;
+
+      if ((fd = open(path, 0)) < 0)
+      {
+        fprintf(2, "find: cannot open %s\n", path);
+        return;
+      }
+
+      if (fstat(fd, &st) < 0)
+      {
+        fprintf(2, "find: cannot stat %s\n", path);
+        close(fd);
+        return;
+      }
+      char *fileName;
+      switch (st.type)
+      {
+      case T_FILE:
+        fileName = fmtname(path);//判断文件名包含
+        if (match(pattern, fileName))
+        {
+          printf("%s\n", path); // 打印的时候是文件全路径
+        }
+        break;
+
+      case T_DIR:
+        if (strlen(path) + 1 + DIRSIZ + 1 > sizeof buf)
+        {
+          printf("find: path too long\n");
+          break;
+        }
+        strcpy(buf, path);
+        p = buf + strlen(buf);
+        *p++ = '/';
+        while (read(fd, &de, sizeof(de)) == sizeof(de))
+        {
+          if (de.inum == 0)
+            continue;
+          memmove(p, de.name, DIRSIZ);
+          p[DIRSIZ] = 0;
+          if (stat(buf, &st) < 0)
+          {
+            printf("find: cannot stat %s\n", buf);
+            continue;
+          }
+          fileName = fmtname(buf);
+          switch (st.type)
+          {
+          case T_FILE:
+            if (match(pattern, fileName))
+            {
+              printf("%s\n", buf);
+            }
+            break;
+
+          case T_DIR: //递归进入子目录
+            if (strcmp(de.name, ".") && strcmp(de.name, "..")) // 相等的话返回0，不等返回两个最后一位的差值
+            {
+              find(buf, pattern);
+            }
+            break;
+          }
+        }
+        break;
+      }
+      close(fd);
+    }
+
+    int main(int argc, char *argv[])
+    {
+      if (argc <= 2)
+      {
+        printf("usage: find [path] [expression]!\n");
+        exit();
+      }
+      char *path = argv[1];
+      char *expression = argv[2];
+      find(path, expression);
+
+      exit();
+    }
+
+    // Regexp matcher from Kernighan & Pike,
+    // The Practice of Programming, Chapter 9.
+
+    int matchhere(char *, char *);
+    int matchstar(int, char *, char *);
+
+    int match(char *re, char *text)
+    {
+      if (re[0] == '^')
+        return matchhere(re + 1, text);
+      do
+      { // must look at empty string
+        if (matchhere(re, text))
+          return 1;
+      } while (*text++ != '\0');
+      return 0;
+    }
+
+    // matchhere: search for re at beginning of text
+    int matchhere(char *re, char *text)
+    {
+      if (re[0] == '\0')
+        return 1;
+      if (re[1] == '*')
+        return matchstar(re[0], re + 2, text);
+      if (re[0] == '$' && re[1] == '\0')
+        return *text == '\0';
+      if (*text != '\0' && (re[0] == '.' || re[0] == *text))
+        return matchhere(re + 1, text + 1);
+      return 0;
+    }
+
+    // matchstar: search for c*re at beginning of text
+    int matchstar(int c, char *re, char *text)
+    {
+      do
+      { // a * matches zero or more instances
+        if (matchhere(re, text))
+          return 1;
+      } while (*text != '\0' && (*text++ == c || c == '.'));
+      return 0;
+    }
+
+    ```
+
+4. 实现xargs.c
+
+    >Write a simple version of the UNIX xargs program: read lines from standard input and run a command for each line, supplying the line as arguments to the command. Your solution should be in the file user/xargs.c.
+    ```cpp
+    $ xargs echo bye
+    hello too // 新的一行也要作为原来echo的参数
+    bye hello too
+    world // 这里如果再输入一行，也需要打印出来；一开始没理解到，以为只读到一行数据就可以结束，原题写的是each line
+    bye world 
+    ctrl-d
+    $
+    ```
+    > 代码如下：
+
+    ```cpp
+    #include "kernel/types.h"
+    #include "user/user.h"
+
+    int main(int argc, char *argv[])
+    {
+      // 第一次传进来的xagrs echo bye
+      // 然后要从标准输入中读取数据，直到遇到\n
+      char buff[1024];
+      int offset = 0;
+      int len = 0;
+      int i =0;
+      char ch;
+      // 传给执行程序依旧使用argv，因为考虑到argc不一定是三个值，可能5，6个都可能，单独创建新的argv需要动态分配内存，比较麻烦
+      // argv[0] = “xargs”；我们将argv[0]剔除掉，后面的参数往前挪一位，空出最后一个元素，接受新输入的一行数据即可组成新的argv
+      while(i +1 < argc)
+      {
+        argv[i] = argv[i+1];
+        //printf("argv[%d] = [%s]\n", i, argv[i]);            
+        i++;
+      }
+      while((len = read(0, &ch, sizeof(ch))) > 0)
+      {
+        // 判断遇到\n
+        if('\n' == ch)
+        {
+          // 把buff添加进argv[], 然后exec
+          // fork，然后子进程执行argv[0]，传入的参数从argv[0]开始算
+          argv[i] = buff;
+          int pid = fork();
+          if(pid < 0)
+          {
+            exit();
+          }else if(0 == pid)
+          {
+            exec(argv[0], &argv[0]);
+          }else
+          {
+            wait();
+          }
+          // 执行完这一行的数据，重置接收区
+          memset(buff,0x00,sizeof(buff));
+          offset = 0;
+        }else
+        {
+          buff[offset++]=ch;
+        }
+      }
+      exit();
+    ```
+## 四. 结果
+最后附上代码的得分结果，完结，撒花：
+
+![](./png/lab1_score.png)
