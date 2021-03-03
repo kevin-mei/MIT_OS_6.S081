@@ -2,7 +2,7 @@
 #include <ctype.h>
 #include <string.h>
 #include "getch.c"
-#define MAXWORD 100
+#define MAXWORD 10
 #define NKEYS (sizeof keytab / sizeof(struct key))
 
 struct key
@@ -53,19 +53,19 @@ int getword(char *word, int lim)
 {
     int c;
     char *w = word;
-    while (isspace(c = getch()))
+    while (isspace(c = getch())) //isspace:判断字符c是否为空格字符
         ;
     if (c != EOF)
         *w++ = c;
-    if (!isalpha(c))
+    if (!isalpha(c)) //isalpha：判断字符c是否为英文字母
     {
         *w = '\0';
         return c;
     }
     for (; --lim > 0; w++)
-        if (!isalnum(*w = getch()))
+        if (!isalnum(*w = getch()))//判断字符变量c是否为字母或数字，若是则返回非零，否则返回零
         {
-            ungetch(*w);
+            ungetch(*w); // 读到的字符c不是字母或数字时，将它放回输入中
             break;
         }
     *w = '\0';
