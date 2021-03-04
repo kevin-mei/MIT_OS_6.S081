@@ -56,25 +56,31 @@ kr_malloc(size_t nbytes)
   unsigned nunits;
 
   nunits = (nbytes + sizeof(Header) - 1) / sizeof(Header) + 1;
-  if ((prevp = freep) == NULL) {	/* no free list yet */
+  if ((prevp = freep) == NULL)
+  { /* no free list yet */
     base.ptr = freep = prevp = &base;
     base.size = 0;
   }
-  for (p = prevp->ptr; ; prevp = p, p = p->ptr) {
-    if (p->size >= nunits) {	/* big enough */
-      if (p->size == nunits)	/* exactly */
-	prevp->ptr = p->ptr;
-      else {	/* allocate tail end */
-	p->size -= nunits;
-	p += p->size;
-	p->size = nunits;
+  for (p = prevp->ptr;; prevp = p, p = p->ptr)
+  {
+    if (p->size >= nunits)
+    {                        /* big enough */
+      if (p->size == nunits) /* exactly */
+        prevp->ptr = p->ptr;
+      else
+      { /* allocate tail end */
+        p->size -= nunits;
+        p += p->size;
+        p->size = nunits;
       }
       freep = prevp;
-      return (void *) (p + 1);
+      return (void *)(p + 1);
     }
-    if (p == freep) {	/* wrapped around free list */
-      if ((p = (Header *) moreheap(nunits)) == NULL) {
-	return NULL;	/* none left */
+    if (p == freep)
+    { /* wrapped around free list */
+      if ((p = (Header *)moreheap(nunits)) == NULL)
+      {
+        return NULL; /* none left */
       }
     }
   }

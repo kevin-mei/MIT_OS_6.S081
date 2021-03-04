@@ -5,6 +5,35 @@
 2. 阅读给的示例代码malloc.c 
 
 
+## 二. 知识点
+- gcc 编译报错：
+  `error: 'for' loop initial declarations are only allowed in C99 mode`
+  这是因为gcc基于c89标准，换成C99标准就可以在for循环内定义i变量了：
+  `gcc src.c -std=c99 -o src`
+```CPP
+// compile on Linux: 下面的是都是字母O，-O0,—O1,-O2,—O3,代表编译器的4个优化级别，默认是O1
+$ gcc -O2 -o malloc malloc.c 
+// 发现报错error: 'for' loop initial declarations ...,修改编译语句：
+$ gcc -O2 -std=c99 -o malloc malloc.c 
+// 发现还报错：
+/*malloc.c: In function ‘bd_init’:
+malloc.c:253:18: error: ‘MAP_ANONYMOUS’ undeclared (first use in this function)
+    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    MAP_ANON和MAP_ANONYMOUS在C99标准中是无效，需要更换为gnu99,再来：
+*/
+$ gcc -O2 -std=gnu99 -o malloc malloc.c 
+// 完美，就剩下warning，不关心，开始run: 
+$ ./malloc
+/* 输出如下：usec 是微秒，同样是分配10000空间的内存，region是最快的
+elapsed time K&R is    131755 usec
+elapsed time region is 277 usec
+elapsed time buddy is  2057 usec
+*/
+```
+接下来分析下这几种内存方法分配的区别
+K&Rmalloc
+
+
 系统程式设计
   为应用程序构建服务
     不特定于应用程序工作负载
