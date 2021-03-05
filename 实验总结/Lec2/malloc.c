@@ -426,6 +426,7 @@ struct list {
 typedef struct list List;
 
 // Use malloc and free for list of sz elements
+// workload 的第二个，第三个参数直接就是函数指针了，形参直接放malloc的定义
 void
 workload(int sz, void* malloc(size_t),  void free(void *)) {
   List *head = 0;
@@ -483,12 +484,13 @@ rg_workload(int sz) {
 }
 
 int
-main(char *argv, int argc)
+main(int argc, char *argv[])
 {
   enum { N = 10000 };
   struct timeval start, end;
 
   gettimeofday(&start, NULL);
+  // workload 的第二个，第三个参数直接就是函数指针了
   workload(N, kr_malloc, kr_free);
   gettimeofday(&end, NULL);
   printf("elapsed time K&R is    %d usec\n", 

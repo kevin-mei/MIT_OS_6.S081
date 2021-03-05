@@ -2,15 +2,14 @@
 
 ## 一. 课程前准备：
 1. 阅读大佬的c语言书5.1-5.6节，6.4节，8.7节
-2. 阅读给的示例代码malloc.c 
+2. 阅读给的示例代码malloc.c 见：<https://pdos.csail.mit.edu/6.828/2019/lec/malloc.c>
 
 
 ## 二. 知识点
-- gcc 编译报错：
-  `error: 'for' loop initial declarations are only allowed in C99 mode`
-  这是因为gcc基于c89标准，换成C99标准就可以在for循环内定义i变量了：
-  `gcc src.c -std=c99 -o src`
+1.  编译给的malloc.c的文件，gcc 编译报错，解决过程如下：
+
 ```CPP
+// ubuntu 14.04 下测试：
 // compile on Linux: 下面的是都是字母O，-O0,—O1,-O2,—O3,代表编译器的4个优化级别，默认是O1
 $ gcc -O2 -o malloc malloc.c 
 // 发现报错error: 'for' loop initial declarations ...,修改编译语句：
@@ -29,7 +28,49 @@ elapsed time K&R is    131755 usec
 elapsed time region is 277 usec
 elapsed time buddy is  2057 usec
 */
+
+// 在mac下测试：
+// 下面语句编译不通过
+$ gcc -O2 -o malloc malloc.c
+// 原因是main函数的参数不对，修改为main(int argc, char *argv[])即可正常编译
+// 输出如下，结论同ubuntu14.04
+/*
+elapsed time K&R is    72786 usec
+elapsed time region is 70 usec
+elapsed time buddy is  441 usec
+*/
+// mac下执行 查看gcc默认支持的版本
+$ gcc -E -dM - </dev/null | grep "STDC_VERSION"
+#define __STDC_VERSION__ 201112L // 确认是c11标准
+// ubuntu 14.04 下没有输出，说明是c89
 ```
+2. c语言统计程序执行用时方法：
+```cpp
+#include <sys/time.h>
+struct timeval start, end;
+gettimeofday(&start, NULL);
+gettimeofday(&end, NULL);
+printf("elapsed time K&R is    %d usec\n", 
+	 (end.tv_sec-start.tv_sec) * 1000000 + end.tv_usec - start.tv_usec);
+
+```
+3. c语言函数函数指针作为函数参数，直接将函数的定义当作形参
+```cpp
+void
+workload(int sz, void* malloc(size_t),  void free(void *)) ;
+void *
+kr_malloc(size_t nbytes);
+void
+kr_free(void *ap);
+```
+可以调用workload时传入kr_malloc，kr_free函数名当参数，也就是函数指针了；
+`workload(N, kr_malloc, kr_free);`
+
+
+
+
+
+
 接下来分析下这几种内存方法分配的区别
 K&Rmalloc
 
